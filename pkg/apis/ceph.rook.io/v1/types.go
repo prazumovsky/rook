@@ -620,6 +620,10 @@ type MonSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	VolumeClaimTemplate *VolumeClaimTemplate `json:"volumeClaimTemplate,omitempty"`
+	// AllowAddressRangeEndpoint enables using public address range as monitor IP address
+	// if specified. Available for host-based monitors only.
+	// +optional
+	AllowAddressRangeEndpoint bool `json:"allowAddressRangeEndpoint,omitempty"`
 }
 
 // VolumeClaimTemplate is a simplified version of K8s corev1's PVC. It has no type meta or status.

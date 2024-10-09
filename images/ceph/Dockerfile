@@ -21,7 +21,7 @@ ARG S5CMD_ARCH
 
 # 'ip' tool must be installed for Multus.
 # Doing a 'dnf install' sometimes breaks CI when centos repos go down or have other package build errors.
-RUN dnf install -y --repo baseos --setopt=install_weak_deps=False iproute && dnf clean all
+RUN dnf install -y --repo baseos --setopt=install_weak_deps=False iproute hostname && dnf clean all
 
 
 # Install the s5cmd package to interact with s3 gateway

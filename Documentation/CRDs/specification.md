@@ -8416,6 +8416,19 @@ VolumeClaimTemplate
 <p>VolumeClaimTemplate is the PVC definition</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>allowAddressRangeEndpoint</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AllowAddressRangeEndpoint enables using public address range as monitor IP address
+if specified. Available for host-based monitors only.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="ceph.rook.io/v1.MonZoneSpec">MonZoneSpec

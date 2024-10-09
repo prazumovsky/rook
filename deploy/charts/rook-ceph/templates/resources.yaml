@@ -1613,6 +1613,11 @@ spec:
                   description: A spec for mon related options
                   nullable: true
                   properties:
+                    allowAddressRangeEndpoint:
+                      description: |-
+                        AllowAddressRangeEndpoint enables using public address range as monitor IP address
+                        if specified. Available for host-based monitors only.
+                      type: boolean
                     allowMultiplePerNode:
                       description: AllowMultiplePerNode determines if we can run multiple monitors on the same node (not recommended)
                       type: boolean

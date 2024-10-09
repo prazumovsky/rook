@@ -925,7 +925,18 @@ func (c *Cluster) assignMons(mons []*monConfig) error {
 			var schedule *controller.MonScheduleInfo
 			if c.spec.Network.IsHost() || c.monVolumeClaimTemplate(mon) == nil {
 				logger.Infof("mon %s assigned to node %s", mon.DaemonName, nodeChoice.Name)
-				schedule, err = getNodeInfoFromNode(*nodeChoice)
+				var nodeAddresses []string
+				if c.spec.Mon.AllowAddressRangeEndpoint {
+					appLabel := fmt.Sprintf("rook-ceph-mon,mon_canary=true,ceph_daemon_id=%s", mon.DaemonName)
+					output, stderr, err := c.context.RemoteExecutor.ExecCommandInContainerWithFullOutputWithTimeout(c.ClusterInfo.Context, appLabel, "mon", c.ClusterInfo.Namespace, []string{"hostname", "--all-ip-addresses"}...)
+					if err != nil {
+						logger.Errorf("failed to get node addresses for node %q. %s. %v", nodeChoice.Name, stderr, err)
+						failedMonSchedule = true
+						return
+					}
+					nodeAddresses = strings.Split(strings.TrimSpace(output), " ")
+				}
+				schedule, err = c.getNodeInfoFromNode(*nodeChoice, nodeAddresses)
 				if err != nil {
 					logger.Errorf("failed to get node info for node %q. %v", nodeChoice.Name, err)
 					failedMonSchedule = true

@@ -18,6 +18,7 @@ package mon
 
 import (
 	"context"
+	cephclient "github.com/rook/rook/pkg/daemon/ceph/client"
 	"strings"
 	"testing"
 
@@ -210,6 +211,8 @@ func extractArgValue(args []string, name string) (string, string) {
 func TestGetNodeInfoFromNode(t *testing.T) {
 	ctx := context.TODO()
 	clientset := test.New(t, 1)
+	ownerInfo := cephclient.NewMinimumOwnerInfoWithOwnerRef()
+	c := New(context.TODO(), &clusterd.Context{Clientset: clientset}, "ns", cephv1.ClusterSpec{Annotations: cephv1.AnnotationsSpec{cephv1.KeyClusterMetadata: cephv1.Annotations{"key": "value"}}}, ownerInfo)
 	node, err := clientset.CoreV1().Nodes().Get(ctx, "node0", metav1.GetOptions{})
 	assert.NoError(t, err)
 	assert.NotNil(t, node)
@@ -218,7 +221,7 @@ func TestGetNodeInfoFromNode(t *testing.T) {
 	node.Status.Addresses = []v1.NodeAddress{}
 
 	var info *opcontroller.MonScheduleInfo
-	_, err = getNodeInfoFromNode(*node)
+	_, err = c.getNodeInfoFromNode(*node, nil)
 	assert.NotNil(t, err)
 
 	// With internalIP and externalIP
@@ -232,7 +235,7 @@ func TestGetNodeInfoFromNode(t *testing.T) {
 			Address: "172.17.0.1",
 		},
 	}
-	info, err = getNodeInfoFromNode(*node)
+	info, err = c.getNodeInfoFromNode(*node, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "172.17.0.1", info.Address) // Must return the internalIP
 
@@ -243,14 +246,22 @@ func TestGetNodeInfoFromNode(t *testing.T) {
 			Address: "1.2.3.4",
 		},
 	}
-	info, err = getNodeInfoFromNode(*node)
+	info, err = c.getNodeInfoFromNode(*node, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "1.2.3.4", info.Address)
 
 	node.Annotations = map[string]string{
 		monIPAnnotation: "9.8.7.6",
 	}
-	info, err = getNodeInfoFromNode(*node)
+	info, err = c.getNodeInfoFromNode(*node, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "9.8.7.6", info.Address)
+	node.Annotations = map[string]string{}
+
+	c.spec.Network.AddressRanges = &cephv1.AddressRangesSpec{
+		Public: []cephv1.CIDR{"8.7.6.0/24", "4.3.2.0/24"},
+	}
+	info, err = c.getNodeInfoFromNode(*node, []string{"4.3.2.1"})
+	assert.NoError(t, err)
+	assert.Equal(t, "4.3.2.1", info.Address)
 }

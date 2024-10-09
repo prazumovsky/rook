@@ -20,13 +20,14 @@ import (
 	"github.com/pkg/errors"
 	opcontroller "github.com/rook/rook/pkg/operator/ceph/controller"
 	v1 "k8s.io/api/core/v1"
+	"net"
 )
 
 const (
 	monIPAnnotation = "network.rook.io/mon-ip"
 )
 
-func getNodeInfoFromNode(n v1.Node) (*opcontroller.MonScheduleInfo, error) {
+func (c *Cluster) getNodeInfoFromNode(n v1.Node, nodeAddresses []string) (*opcontroller.MonScheduleInfo, error) {
 	nr := &opcontroller.MonScheduleInfo{
 		Name:     n.Name,
 		Hostname: n.Labels[v1.LabelHostname],
@@ -40,11 +41,30 @@ func getNodeInfoFromNode(n v1.Node) (*opcontroller.MonScheduleInfo, error) {
 		return nr, nil
 	}
 
-	for _, ip := range n.Status.Addresses {
-		if ip.Type == v1.NodeInternalIP {
-			logger.Debugf("using internal IP %s for node %s", ip.Address, n.Name)
-			nr.Address = ip.Address
-			break
+	if len(nodeAddresses) > 0 && c.spec.Network.AddressRanges != nil && len(c.spec.Network.AddressRanges.Public) > 0 {
+		for _, cidr := range c.spec.Network.AddressRanges.Public {
+			for _, nodeIP := range nodeAddresses {
+				_, netAddr, _ := net.ParseCIDR(string(cidr))
+				nodeAddr := net.ParseIP(nodeIP)
+				if netAddr.Contains(nodeAddr) {
+					logger.Infof("found public ip address from addressRanges on node %q --> %q", n.Name, nodeIP)
+					nr.Address = nodeIP
+					break
+				}
+			}
+			if nr.Address != "" {
+				break
+			}
+		}
+	}
+
+	if nr.Address == "" {
+		for _, ip := range n.Status.Addresses {
+			if ip.Type == v1.NodeInternalIP {
+				logger.Debugf("using internal IP %s for node %s", ip.Address, n.Name)
+				nr.Address = ip.Address
+				break
+			}
 		}
 	}
 
